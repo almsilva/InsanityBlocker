@@ -1,0 +1,8 @@
+{
+  "name": "InsanityBlocker",
+  "version": "0.1",
+  "namespace": "http://tampermonkey.net/",
+  "description": "Block content of a page based on a blacklist of keywords.",
+  "match": ["://*/*"],
+  "grant": "none"
+}
