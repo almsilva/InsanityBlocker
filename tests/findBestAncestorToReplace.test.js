@@ -2,7 +2,7 @@ import { findBestAncestorToReplace } from "../insanity_blocker";
 import { JSDOM } from "jsdom";
 
 describe("Select the best node to replace.", () => {
-  let document;
+  let window;
 
   beforeEach(() => {
     const dom = new JSDOM(`
@@ -30,13 +30,13 @@ describe("Select the best node to replace.", () => {
             </html>
         `);
 
-    document = dom.window.document;
+    window = dom.window;
   });
 
   test("returns parent container where the text represents more than 70% of the text..", () => {
-    let node = document.querySelector("#targetText");
-    let expectedResult = document.querySelector("#containsText");
+    let node = window.document.querySelector("#targetText");
+    let expectedResult = window.document.querySelector("#containsText");
 
-    expect(findBestAncestorToReplace(node)).toBe(expectedResult);
+    expect(findBestAncestorToReplace(node, window)).toBe(expectedResult);
   });
 });

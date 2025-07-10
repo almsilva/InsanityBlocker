@@ -11,17 +11,16 @@
   'use strict';
 
   function initPrune(node, blacklist, window) {
-    if (!node) return;
+    if (!node || !blacklist) return;
     pruneNode(node, blacklist, window);
     for (const child of node.querySelectorAll("*")) {
       pruneNode(child, blacklist, window);
     }
   }
   function pruneNode(node, blacklist, window) {
-    if (!node) return;
-    if (!blacklist) return;
+    if (!node || !blacklist) return;
     if (hasBlacklistedWord(node, blacklist)) {
-      const nodeToBlock = findBestAncestorToReplace(node);
+      const nodeToBlock = findBestAncestorToReplace(node, window);
       blockNode(nodeToBlock, window);
     }
   }
@@ -34,14 +33,27 @@
       return regex.test(getVisibleText(node));
     });
   }
-  function findBestAncestorToReplace(node) {
+  function findBestAncestorToReplace(node, window) {
+    const invalidTags = ["A", "P", "LI", "SPAN", "BUTTON", "LABEL", "B", "I", "LEGEND", "FIELDSET"];
+    const invalidDisplay = ["inline", "none"];
     const matchingNodeText = getVisibleText(node);
     let parent = node.parentElement;
     let previousNode = node;
     while (parent && parent.tagName != "BODY") {
       let parentText = getVisibleText(parent);
       const matchingNodeContentTextRatio = matchingNodeText.length / parentText.length;
-      if (matchingNodeContentTextRatio < 0.7) {
+      if (matchingNodeContentTextRatio < 0.5) {
+        do {
+          let computedNodeStyle = window.getComputedStyle(previousNode);
+          let isVisibleBlock = !invalidDisplay.includes(computedNodeStyle.display);
+          let allowedTag = !invalidTags.includes(previousNode.tagName);
+          if (!isVisibleBlock || !allowedTag) {
+            previousNode = parent;
+            parent = parent.parentElement;
+          } else {
+            break;
+          }
+        } while (parent.tagName != "BODY");
         break;
       }
       previousNode = parent;
@@ -50,19 +62,23 @@
     return previousNode;
   }
   function blockNode(node, window) {
+    let existingBlocker = node.querySelectorAll(".insanityBlocked");
+    if (!existingBlocker || !existingBlocker.length == 0) {
+      return;
+    }
     const blockingDiv = window.document.createElement("div");
     const messageDiv = window.document.createElement("div");
     blockingDiv.appendChild(messageDiv);
     messageDiv.textContent = "Content blocked by InsanityBlocker.";
-    messageDiv.style.display = "block";
     const clickToShow = window.document.createElement("div");
     blockingDiv.appendChild(clickToShow);
     clickToShow.textContent = "Click to show";
-    clickToShow.style.color = "blue";
-    clickToShow.style.textDecoration = "underline;";
-    clickToShow.style.cursor = "pointer";
-    clickToShow.style.display = "block";
-    clickToShow.style.fontSize = "0.8em";
+    Object.assign(clickToShow.style, {
+      color: "silver",
+      textDecoration: "underline",
+      cursor: "pointer",
+      fontSize: "0.8em"
+    });
     clickToShow.addEventListener("click", event => {
       let parent = event.target.parentElement;
       if (parent) {
@@ -76,9 +92,9 @@
       left: "0",
       width: "100%",
       height: "100%",
-      backgroundColor: "#e9e9e9",
-      border: "1px dotted gray",
-      color: "gray",
+      backgroundColor: "white",
+      border: "1px dashed silver",
+      color: "silver",
       display: "flex",
       flexDirection: "column",
       justifyContent: "center",
@@ -87,9 +103,8 @@
       zIndex: "9999",
       pointerEvents: "auto",
       fontWeight: "normal",
-      fontSize: "0.9em",
-      fontFamily: "sans-serif",
-      borderRadius: "7px"
+      fontSize: "0.9em !important",
+      fontFamily: "sans-serif"
     });
     const computedStyle = window.getComputedStyle(node);
     if (computedStyle.position === "static") {
@@ -101,19 +116,24 @@
     return node.textContent.trim().replace(/\s+/g, " ");
   }
   function isLeafNode(node) {
-    return !node || node.children.length === 0;
+    return !node?.children || node.children.length === 0;
   }
 
-  const blacklist = [
-    // Your blacklist of keywords, text fragments and even regexs.
-    // E.g.: 'war', 'crime', 'drugs'
-  ];
+  /*
+   * Blacklist of keywords, text fragments and even regexs, separated by comma.
+   * E.g.: 'war', 'crime', '\\bracism'
+   */
+  const blacklist = [];
 
   /*
    * Entry point that triggers the prune logic once the page is loaded.
+   * It waits 1 second after the event is triggered to give time to
+   * pages to finish to rendering its content.
    */
   window.addEventListener("load", () => {
-    initPrune(document.body, blacklist, window);
+    setTimeout(() => {
+      initPrune(document.body, blacklist, window);
+    }, 1000);
   });
 
   /*

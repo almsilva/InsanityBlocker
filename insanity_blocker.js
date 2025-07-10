@@ -1,5 +1,5 @@
 export function initPrune(node, blacklist, window) {
-  if (!node) return;
+  if (!node || !blacklist) return;
 
   pruneNode(node, blacklist, window);
   for (const child of node.querySelectorAll("*")) {
@@ -8,10 +8,9 @@ export function initPrune(node, blacklist, window) {
 }
 
 export function pruneNode(node, blacklist, window) {
-  if (!node) return;
-  if (!blacklist) return;
+  if (!node || !blacklist) return;
   if (hasBlacklistedWord(node, blacklist)) {
-    const nodeToBlock = findBestAncestorToReplace(node);
+    const nodeToBlock = findBestAncestorToReplace(node, window);
     blockNode(nodeToBlock, window);
   }
 }
@@ -27,16 +26,44 @@ export function hasBlacklistedWord(node, blacklist) {
   });
 }
 
-export function findBestAncestorToReplace(node) {
+export function findBestAncestorToReplace(node, window) {
+  const invalidTags = [
+    "A",
+    "P",
+    "LI",
+    "SPAN",
+    "BUTTON",
+    "LABEL",
+    "B",
+    "I",
+    "LEGEND",
+    "FIELDSET",
+  ];
+  const invalidDisplay = ["inline", "none"];
   const matchingNodeText = getVisibleText(node);
   let parent = node.parentElement;
   let previousNode = node;
 
   while (parent && parent.tagName != "BODY") {
     let parentText = getVisibleText(parent);
+
     const matchingNodeContentTextRatio =
       matchingNodeText.length / parentText.length;
-    if (matchingNodeContentTextRatio < 0.7) {
+    if (matchingNodeContentTextRatio < 0.5) {
+      do {
+        let computedNodeStyle = window.getComputedStyle(previousNode);
+        let isVisibleBlock = !invalidDisplay.includes(
+          computedNodeStyle.display,
+        );
+        let allowedTag = !invalidTags.includes(previousNode.tagName);
+
+        if (!isVisibleBlock || !allowedTag) {
+          previousNode = parent;
+          parent = parent.parentElement;
+        } else {
+          break;
+        }
+      } while (parent.tagName != "BODY");
       break;
     }
 
@@ -48,21 +75,27 @@ export function findBestAncestorToReplace(node) {
 }
 
 export function blockNode(node, window) {
-  const blockingDiv = window.document.createElement("div");
+  let existingBlocker = node.querySelectorAll(".insanityBlocked");
+  if (!existingBlocker || !existingBlocker.length == 0) {
+    return;
+  }
 
+  const blockingDiv = window.document.createElement("div");
   const messageDiv = window.document.createElement("div");
   blockingDiv.appendChild(messageDiv);
   messageDiv.textContent = "Content blocked by InsanityBlocker.";
-  messageDiv.style.display = "block";
 
   const clickToShow = window.document.createElement("div");
   blockingDiv.appendChild(clickToShow);
   clickToShow.textContent = "Click to show";
-  clickToShow.style.color = "blue";
-  clickToShow.style.textDecoration = "underline;"
-  clickToShow.style.cursor = "pointer";
-  clickToShow.style.display = "block";
-  clickToShow.style.fontSize = "0.8em";
+
+  Object.assign(clickToShow.style, {
+    color: "silver",
+    textDecoration: "underline",
+    cursor: "pointer",
+    fontSize: "0.8em",
+  });
+
   clickToShow.addEventListener("click", (event) => {
     let parent = event.target.parentElement;
     if (parent) {
@@ -77,9 +110,9 @@ export function blockNode(node, window) {
     left: "0",
     width: "100%",
     height: "100%",
-    backgroundColor: "#e9e9e9",
-    border: "1px dotted gray",
-    color: "gray",
+    backgroundColor: "white",
+    border: "1px dashed silver",
+    color: "silver",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -88,9 +121,8 @@ export function blockNode(node, window) {
     zIndex: "9999",
     pointerEvents: "auto",
     fontWeight: "normal",
-    fontSize: "0.9em",
+    fontSize: "0.9em !important",
     fontFamily: "sans-serif",
-    borderRadius: "7px",
   });
 
   const computedStyle = window.getComputedStyle(node);
@@ -106,5 +138,5 @@ export function getVisibleText(node) {
 }
 
 export function isLeafNode(node) {
-  return !node || node.children.length === 0;
+  return !node?.children || node.children.length === 0;
 }

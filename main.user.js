@@ -2,16 +2,21 @@ import { initPrune } from "./insanity_blocker.js";
 
 ("use strict");
 
-const blacklist = [
-  // Your blacklist of keywords, text fragments and even regexs.
-  // E.g.: 'war', 'crime', 'drugs'
-];
+/*
+ * Blacklist of keywords, text fragments and even regexs, separated by comma.
+ * E.g.: 'war', 'crime', '\\bracism'
+ */
+const blacklist = [];
 
 /*
  * Entry point that triggers the prune logic once the page is loaded.
+ * It waits 1 second after the event is triggered to give time to
+ * pages to finish to rendering its content.
  */
 window.addEventListener("load", () => {
-  initPrune(document.body, blacklist, window);
+  setTimeout(() => {
+    initPrune(document.body, blacklist, window);
+  }, 1000);
 });
 
 /*

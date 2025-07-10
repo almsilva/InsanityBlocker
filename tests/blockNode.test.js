@@ -32,6 +32,8 @@ describe("Blocking node content.", () => {
     );
     expect(blockingNode).not.toBeNull();
     expect(blockingNode.parentNode).toBe(node);
-    expect(blockingNode.textContent).toBe("Blocked by InsanityBlocker.");
+    expect(blockingNode.textContent).toBe(
+      "Content blocked by InsanityBlocker.Click to show",
+    );
   });
 });
